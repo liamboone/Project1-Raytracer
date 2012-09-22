@@ -92,8 +92,11 @@ __host__ __device__  float boxIntersectionTest(staticGeom box, ray r, glm::vec3&
 	float t = ( tmin.x > tmin.y ? tmin.x : tmin.y );
 	t = ( t > tmin.z ? t : tmin.z );
 	
+	if( t < 0 ) return -1;
 
 	glm::vec3 realNormal = glm::vec3( 1, 1, 1 );
+	
+	//glm::vec4 point = glm::vec4( getPointOnRay(rt, t), 1.0f );
 	glm::vec4 point = glm::vec4( rt.origin + rt.direction*t, 1.0f );
 	
 	if( debugcolor ) *debugcolor = glm::vec3( point.x + 0.5, point.y + 0.5, point.z + 0.5 );

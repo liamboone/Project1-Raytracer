@@ -43,8 +43,8 @@ __host__ __device__ ray raycastFromCameraKernel(glm::vec2 resolution, float time
 	float xstep = 2 * tan( PI / 180.0f * fov.x ) / resolution.x;
 	float ystep = 2 * tan( PI / 180.0f * fov.y ) / resolution.y;
 		
-	glm::vec3 right = glm::cross( view, up );
-	up = -glm::cross( right, view );
+	glm::vec3 right = -glm::cross( view, up );
+	up = glm::cross( right, view );
 
 	glm::vec3 botleft = view - (xstep*resolution.x/2)*right - (ystep*resolution.y/2)*up;
 
@@ -170,6 +170,8 @@ __global__ void raytraceRay(glm::vec2 resolution, float time, cameraData cam, in
 				shadowcast.direction = lnorm;
 				shadowcast.origin = interPoint;
 
+				int datmofo = -1;
+
 				for( int i = 0; i < numberOfGeoms; i ++ )
 				{
 					if( i != lights[j] )
@@ -183,18 +185,21 @@ __global__ void raytraceRay(glm::vec2 resolution, float time, cameraData cam, in
 							tmpLen = sphereIntersectionTest( geoms[i], shadowcast, tmpInterPoint, tmpNormal );
 							break;
 						}
-						if( tmpLen > 1 && tmpLen < lDist )
+						if( tmpLen > 0 && tmpLen < lDist )
 						{
 							hasLight = false;
+							datmofo = i;
 							break;
 						}
 					}
 				}
+				float diffuseC = 0.1;
 				if( hasLight )
 				{
-					float diffuse = max( (float) glm::dot( lnorm, normal ), 0.0f ) * 0.9;
-					colors[index] += materials[matid].color * materials[lights[j]].color * diffuse / (float) numberOfLights;
+					diffuseC = 0.7;
 				}
+				float diffuse = max( (float) glm::dot( lnorm, normal ), 0.0f ) * diffuseC;
+				colors[index] += materials[matid].color * materials[lights[j]].color * diffuse / (float) numberOfLights;
 			}
 		}
 		//colors[index] = generateRandomNumberFromThread(resolution, time, x, y);
