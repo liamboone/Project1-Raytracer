@@ -17,7 +17,7 @@ __host__ __device__ glm::vec3 getPointOnRay(ray r, float t);
 __host__ __device__ glm::vec3 multiplyMV(cudaMat4 m, glm::vec4 v);
 __host__ __device__ glm::vec3 getSignOfRay(ray r);
 __host__ __device__ glm::vec3 getInverseDirectionOfRay(ray r);
-__host__ __device__ float boxIntersectionTest(staticGeom sphere, ray r, glm::vec3& intersectionPoint, glm::vec3& normal);
+__host__ __device__ float boxIntersectionTest(staticGeom sphere, ray r, glm::vec3& intersectionPoint, glm::vec3& normal, glm::vec3 * debugcolor);
 __host__ __device__ float sphereIntersectionTest(staticGeom sphere, ray r, glm::vec3& intersectionPoint, glm::vec3& normal);
 __host__ __device__ glm::vec3 getRandomPointOnCube(staticGeom cube, float randomSeed);
 
@@ -70,9 +70,54 @@ __host__ __device__ glm::vec3 getSignOfRay(ray r){
 
 //TODO: IMPLEMENT THIS FUNCTION
 //Cube intersection test, return -1 if no intersection, otherwise, distance to intersection
-__host__ __device__  float boxIntersectionTest(staticGeom box, ray r, glm::vec3& intersectionPoint, glm::vec3& normal){
+__host__ __device__  float boxIntersectionTest(staticGeom box, ray r, glm::vec3& intersectionPoint, glm::vec3& normal, glm::vec3 * debugcolor = NULL)
+{
+	glm::vec3 ro = multiplyMV(box.inverseTransform, glm::vec4(r.origin,1.0f));
+	glm::vec3 rd = glm::normalize(multiplyMV(box.inverseTransform, glm::vec4(r.direction,0.0f)));
+	
+	ray rt; rt.origin = ro; rt.direction = rd;
 
-    return -1;
+	glm::vec3 tlfb = ( glm::vec3(-0.5,-0.5,-0.5) - ro ) / rd;
+	glm::vec3 trbt = ( glm::vec3(0.5,0.5,0.5) - ro ) / rd;
+	
+	glm::vec3 tmin = glm::min( tlfb, trbt );
+	glm::vec3 tmax = glm::max( tlfb, trbt );
+
+	if( tmax.x < tmin.y || tmax.x < tmin.z || tmax.y < tmin.x || 
+		tmax.y < tmin.z || tmax.z < tmin.x || tmax.z < tmin.y )
+	{
+		return -1;
+	}
+
+	float t = ( tmin.x > tmin.y ? tmin.x : tmin.y );
+	t = ( t > tmin.z ? t : tmin.z );
+	
+
+	glm::vec3 realNormal = glm::vec3( 1, 1, 1 );
+	glm::vec4 point = glm::vec4( rt.origin + rt.direction*t, 1.0f );
+	
+	if( debugcolor ) *debugcolor = glm::vec3( point.x + 0.5, point.y + 0.5, point.z + 0.5 );
+
+	if( fabs( point.x - 0.5 ) < 2e-4 )
+		realNormal = glm::vec3( 1, 0, 0 );
+	else if( fabs( point.x + 0.5 ) < 2e-4 )
+		realNormal = glm::vec3( -1, 0, 0 );
+	else if( fabs( point.y - 0.5 ) < 2e-4 )
+		realNormal = glm::vec3( 0, 1, 0 );
+	else if( fabs( point.y + 0.5 ) < 2e-4 )
+		realNormal = glm::vec3( 0, -1, 0 );
+	else if( fabs( point.z - 0.5 ) < 2e-4 )
+		realNormal = glm::vec3( 0, 0, 1 );
+	else if( fabs( point.z + 0.5 ) < 2e-4 )
+		realNormal = glm::vec3( 0, 0, -1 );
+
+	glm::vec3 realIntersectionPoint = multiplyMV(box.transform, point);
+	glm::vec3 realOrigin = multiplyMV(box.transform, glm::vec4(0,0,0,1));
+	
+	normal = glm::normalize(multiplyMV(box.transform, glm::vec4(realNormal,0.0f)));
+	intersectionPoint = realIntersectionPoint;   
+        
+	return glm::length(r.origin - realIntersectionPoint);
 }
 
 //LOOK: Here's an intersection test example from a sphere. Now you just need to figure out cube and, optionally, triangle.

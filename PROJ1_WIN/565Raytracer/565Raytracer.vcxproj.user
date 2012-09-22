@@ -4,4 +4,8 @@
     <LocalDebuggerCommandArguments>scene="../../scenes/sampleScene.txt"</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LocalDebuggerCommandArguments>frame=0 scene="C:\Users\wjboone\Documents\GitHub\Project1-Raytracer\scenes\sampleScene.txt"</LocalDebuggerCommandArguments>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+  </PropertyGroup>
 </Project>

@@ -97,9 +97,10 @@ __host__ __device__ glm::vec3 getRandomDirectionInSphere(float xi1, float xi2) {
 //returns 0 if diffuse scatter, 1 if reflected, 2 if transmitted.
 __host__ __device__ int calculateBSDF(ray& r, glm::vec3 intersect, glm::vec3 normal, glm::vec3 emittedColor, 
                                        AbsorptionAndScatteringProperties& currentAbsorptionAndScattering, 
-                                       glm::vec3& color, glm::vec3& unabsorbedColor, material m){
+                                       glm::vec3& color, glm::vec3& unabsorbedColor, material m)
+{
 
-  return 1;
+	return 1;
 };
 
 #endif
