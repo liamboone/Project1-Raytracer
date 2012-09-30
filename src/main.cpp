@@ -157,6 +157,7 @@ void runCuda(){
       finishedRender = true;
       if(singleFrameMode==true){
         cudaDeviceReset(); 
+		system("pause");
         exit(0);
       }
     }

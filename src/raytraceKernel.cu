@@ -38,7 +38,7 @@ __host__ __device__ glm::vec3 generateRandomNumberFromThread(glm::vec2 resolutio
 
 //TODO: IMPLEMENT THIS FUNCTION
 //Function that does the initial raycast from the camera
-__host__ __device__ ray raycastFromCameraKernel(glm::vec2 resolution, float time, int x, int y, glm::vec3 eye, glm::vec3 view, glm::vec3 up, glm::vec2 fov){
+__host__ __device__ ray raycastFromCameraKernel(glm::vec2 resolution, float time, int index, int x, int y, glm::vec3 eye, glm::vec3 view, glm::vec3 up, glm::vec2 fov){
 	ray r;
 	float xstep = 2 * tan( PI / 180.0f * fov.x ) / resolution.x;
 	float ystep = 2 * tan( PI / 180.0f * fov.y ) / resolution.y;
@@ -51,7 +51,19 @@ __host__ __device__ ray raycastFromCameraKernel(glm::vec2 resolution, float time
 	glm::vec3 raycast = botleft + (float)x*xstep*right + (float)y*ystep*up;
 
 	raycast = glm::normalize(raycast);
+	/*
+	//right = glm::cross(raycast, up);
+	thrust::default_random_engine rng(hash(time*resolution.x*resolution.y+index));
+    thrust::uniform_real_distribution<float> X(0,2*PI);
+    thrust::uniform_real_distribution<float> Y(0,PI);
 
+	float theta = (float)X(rng);
+	float R = 0.3*sin( (float)Y(rng) );
+
+	glm::vec3 ref = eye + raycast*15.0f;
+	eye = eye + cos(theta)*up*R + sin(theta)*right*R;
+	raycast = glm::normalize(ref-eye);
+	*/
 	r.origin = eye; r.direction = raycast;
 	return r;
 }
@@ -103,7 +115,7 @@ __global__ void sendImageToPBO(uchar4* PBOpos, glm::vec2 resolution, glm::vec3* 
 //TODO: IMPLEMENT THIS FUNCTION
 //Core raytracer kernel
 __global__ void raytraceRay(glm::vec2 resolution, float time, cameraData cam, int rayDepth, glm::vec3* colors, 
-                            staticGeom* geoms, int numberOfGeoms, material* materials, int numberOfMaterials, 
+                            staticGeom* geoms, int numberOfGeoms, int numberOfCubes, material* materials, int numberOfMaterials, 
 							int* lights, int numberOfLights)
 {
 	int x = (blockIdx.x * blockDim.x) + threadIdx.x;
@@ -111,27 +123,30 @@ __global__ void raytraceRay(glm::vec2 resolution, float time, cameraData cam, in
 	int index = x + (y * resolution.x);
 
 	if((x<=resolution.x && y<=resolution.y)){
-		ray cast = raycastFromCameraKernel( resolution, time, x, y, cam.position, cam.view, cam.up, cam.fov);
+		ray cast = raycastFromCameraKernel( resolution, time, index, x, y, cam.position, cam.view, cam.up, cam.fov);
 		
 		glm::vec3 interPoint, tmpInterPoint;
 		glm::vec3 normal, tmpNormal;
 		glm::vec3 dcol( 0 );
 		float len = 999999.99999f, tmpLen;
 
-		colors[index] = glm::vec3( 0 );
 		int object = -1;
-
-		for( int i = 0; i < numberOfGeoms; i ++ )
+		
+		for( int i = 0; i < numberOfCubes; i ++ )
 		{
-			switch( geoms[i].type )
+			tmpLen = boxIntersectionTest( geoms[i], cast, tmpInterPoint, tmpNormal );
+			if( tmpLen < len && tmpLen > 0 )
 			{
-			case( GEOMTYPE::CUBE ):
-				tmpLen = boxIntersectionTest( geoms[i], cast, tmpInterPoint, tmpNormal );
-				break;
-			case( GEOMTYPE::SPHERE ):
-				tmpLen = sphereIntersectionTest( geoms[i], cast, tmpInterPoint, tmpNormal );
-				break;
+				len = tmpLen;
+				normal = tmpNormal;
+				interPoint = tmpInterPoint;
+				object = i;
 			}
+		}
+
+		for( int i = numberOfCubes; i < numberOfGeoms; i ++ )
+		{
+			tmpLen = sphereIntersectionTest( geoms[i], cast, tmpInterPoint, tmpNormal );
 			if( tmpLen < len && tmpLen > 0 )
 			{
 				len = tmpLen;
@@ -147,11 +162,12 @@ __global__ void raytraceRay(glm::vec2 resolution, float time, cameraData cam, in
 		glm::vec3 light = glm::vec3( 0 );
 		int matid = geoms[object].materialid;
 
-		colors[index] = glm::vec3( 0.1 ) * materials[matid].color;
+		glm::vec3 color = glm::vec3( 0 );// * materials[matid].color;
 
 		if( materials[matid].emittance > 0 )
 		{
-			colors[index] = materials[matid].color;
+			color = materials[matid].color;
+
 		}
 		else
 		{
@@ -160,7 +176,13 @@ __global__ void raytraceRay(glm::vec2 resolution, float time, cameraData cam, in
 			{
 				bool hasLight = true;
 				//get the point to use
-				glm::vec3 lightPos = multiplyMV( geoms[lights[j]].transform, glm::vec4(0,0,0,1) );
+				glm::vec3 lightPos;
+				if( geoms[lights[j]].type == CUBE )
+				{
+					lightPos = getRandomPointOnCube(geoms[lights[j]], time/* * resolution.x * resolution.y + index*/);
+				}
+				else
+					lightPos = multiplyMV( geoms[lights[j]].transform, glm::vec4(0,0,0,1) );
 				glm::vec3 lnorm = lightPos - interPoint;
 
 
@@ -169,40 +191,46 @@ __global__ void raytraceRay(glm::vec2 resolution, float time, cameraData cam, in
 
 				shadowcast.direction = lnorm;
 				shadowcast.origin = interPoint;
-
-				int datmofo = -1;
-
-				for( int i = 0; i < numberOfGeoms; i ++ )
+				
+				for( int i = 0; i < numberOfCubes; i ++ )
 				{
 					if( i != lights[j] )
 					{
-						switch( geoms[i].type )
-						{
-						case( GEOMTYPE::CUBE ):
-							tmpLen = boxIntersectionTest( geoms[i], shadowcast, tmpInterPoint, tmpNormal );
-							break;
-						case( GEOMTYPE::SPHERE ):
-							tmpLen = sphereIntersectionTest( geoms[i], shadowcast, tmpInterPoint, tmpNormal );
-							break;
-						}
+						tmpLen = boxIntersectionTest( geoms[i], shadowcast, tmpInterPoint, tmpNormal );
 						if( tmpLen > 0 && tmpLen < lDist )
 						{
 							hasLight = false;
-							datmofo = i;
 							break;
 						}
 					}
 				}
-				float diffuseC = 0.1;
+				for( int i = numberOfCubes; i < numberOfGeoms; i ++ )
+				{
+					if( i != lights[j] && hasLight )
+					{
+						tmpLen = sphereIntersectionTest( geoms[i], shadowcast, tmpInterPoint, tmpNormal );
+						if( tmpLen > 0 && tmpLen < lDist )
+						{
+							hasLight = false;
+							break;
+						}
+					}
+				}
+				float diffuseC = 0.0;
 				if( hasLight )
 				{
-					diffuseC = 0.7;
+					diffuseC = 1;
 				}
 				float diffuse = max( (float) glm::dot( lnorm, normal ), 0.0f ) * diffuseC;
-				colors[index] += materials[matid].color * materials[lights[j]].color * diffuse / (float) numberOfLights;
+				glm::vec3 H = glm::normalize( lnorm - cast.direction );
+				float specular = 0;
+				if( materials[matid].indexOfRefraction > 0 )
+					specular = pow( max( (float) glm::dot( H, normal ), 0.0f ), materials[matid].specularExponent+1000 ); 
+				color += materials[matid].color * materials[geoms[lights[j]].materialid].color * diffuse / (float) numberOfLights;
+				color += materials[matid].specularColor * materials[geoms[lights[j]].materialid].color * materials[geoms[lights[j]].materialid].emittance * specular / (float) numberOfLights;
 			}
 		}
-		//colors[index] = generateRandomNumberFromThread(resolution, time, x, y);
+		colors[index] = colors[index]*(time-1)/time + color/time;
 	}
 }
 
@@ -228,6 +256,16 @@ void cudaRaytraceCore(uchar4* PBOpos, camera* renderCam, int frame, int iteratio
 
   //package geometry and materials and sent to GPU
   staticGeom* geomList = new staticGeom[numberOfGeoms];
+  int nCubes = 0;
+  for(int i=0; i<numberOfGeoms; i++)
+  {
+	  if( geoms[i].type == CUBE )
+	  {
+		  nCubes++;
+	  }
+  }
+  int c = 0;
+  int s = nCubes;
   for(int i=0; i<numberOfGeoms; i++){
     staticGeom newStaticGeom;
     newStaticGeom.type = geoms[i].type;
@@ -237,11 +275,25 @@ void cudaRaytraceCore(uchar4* PBOpos, camera* renderCam, int frame, int iteratio
     newStaticGeom.scale = geoms[i].scales[frame];
     newStaticGeom.transform = geoms[i].transforms[frame];
     newStaticGeom.inverseTransform = geoms[i].inverseTransforms[frame];
-    geomList[i] = newStaticGeom;
-	if( materials[newStaticGeom.materialid].emittance > 0 )
+	if( geoms[i].type == CUBE )
 	{
-		lights[numberOfLights] = i;
-		numberOfLights ++;
+		geomList[c] = newStaticGeom;
+		if( materials[newStaticGeom.materialid].emittance > 0 )
+		{
+			lights[numberOfLights] = c;
+			numberOfLights ++;
+		}
+		c++;
+	}
+	else
+	{
+		geomList[s] = newStaticGeom;
+		if( materials[newStaticGeom.materialid].emittance > 0 )
+		{
+			lights[numberOfLights] = s;
+			numberOfLights ++;
+		}
+		s++;
 	}
   }
   
@@ -266,7 +318,9 @@ void cudaRaytraceCore(uchar4* PBOpos, camera* renderCam, int frame, int iteratio
   cam.fov = renderCam->fov;
 
   //kernel launches
-  raytraceRay<<<fullBlocksPerGrid, threadsPerBlock>>>(renderCam->resolution, (float)iterations, cam, traceDepth, cudaimage, cudageoms, numberOfGeoms, cudamater, numberOfMaterials, cudalights, numberOfLights);
+  if( iterations == 0 ) clearImage<<<fullBlocksPerGrid, threadsPerBlock>>>( renderCam->resolution, cudaimage );
+
+  raytraceRay<<<fullBlocksPerGrid, threadsPerBlock>>>(renderCam->resolution, (float)iterations, cam, traceDepth, cudaimage, cudageoms, numberOfGeoms, nCubes, cudamater, numberOfMaterials, cudalights, numberOfLights);
 
   sendImageToPBO<<<fullBlocksPerGrid, threadsPerBlock>>>(PBOpos, renderCam->resolution, cudaimage);
 

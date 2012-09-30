@@ -224,7 +224,6 @@ __host__ __device__ glm::vec3 getRandomPointOnCube(staticGeom cube, float random
 //TODO: IMPLEMENT THIS FUNCTION
 //Generates a random point on a given sphere
 __host__ __device__ glm::vec3 getRandomPointOnSphere(staticGeom sphere, float randomSeed){
-
   return glm::vec3(0,0,0);
 }
 
