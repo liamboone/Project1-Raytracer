@@ -107,7 +107,7 @@ RSCTCOEFF   0
 EMITTANCE   15
 
 CAMERA
-RES         1024 1024
+RES         400 400
 FOVY        25
 ITERATIONS  5000
 FILE        sampleScene.bmp
@@ -182,11 +182,11 @@ SCALE       .01 10 10
 
 OBJECT 5
 sphere
-material 4
+material 8
 frame 0
-TRANS       0 2 0
+TRANS       0 2 3
 ROTAT       0 180 0
-SCALE       3 3 3
+SCALE       2 2 2
 frame 1
 TRANS       0 2 0
 ROTAT       0 180 0

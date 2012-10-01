@@ -51,9 +51,9 @@ __host__ __device__ ray raycastFromCameraKernel(glm::vec2 resolution, float time
 	glm::vec3 raycast = botleft + (float)x*xstep*right + (float)y*ystep*up;
 
 	raycast = glm::normalize(raycast);
-	/*
+	
 	//right = glm::cross(raycast, up);
-	thrust::default_random_engine rng(hash(time*resolution.x*resolution.y+index));
+	thrust::default_random_engine rng(hash(time/**resolution.x*resolution.y+index*/));
     thrust::uniform_real_distribution<float> X(0,2*PI);
     thrust::uniform_real_distribution<float> Y(0,PI);
 
@@ -63,7 +63,7 @@ __host__ __device__ ray raycastFromCameraKernel(glm::vec2 resolution, float time
 	glm::vec3 ref = eye + raycast*15.0f;
 	eye = eye + cos(theta)*up*R + sin(theta)*right*R;
 	raycast = glm::normalize(ref-eye);
-	*/
+	
 	r.origin = eye; r.direction = raycast;
 	return r;
 }
@@ -182,7 +182,9 @@ __global__ void raytraceRay(glm::vec2 resolution, float time, cameraData cam, in
 					lightPos = getRandomPointOnCube(geoms[lights[j]], time/* * resolution.x * resolution.y + index*/);
 				}
 				else
-					lightPos = multiplyMV( geoms[lights[j]].transform, glm::vec4(0,0,0,1) );
+				{
+					lightPos = getRandomPointOnSphere(geoms[lights[j]], time/* * resolution.x * resolution.y + index*/);
+				}
 				glm::vec3 lnorm = lightPos - interPoint;
 
 

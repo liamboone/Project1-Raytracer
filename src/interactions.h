@@ -95,7 +95,7 @@ __host__ __device__ glm::vec3 getRandomDirectionInSphere(float xi1, float xi2) {
 	xi1 *= 2;
 	xi1 -= 1;
 	float r = sin( acos( xi1 ) );
-	xi2 *= 2*PI;
+	xi2 *= TWO_PI;
 	return glm::vec3(r*cos(xi2),r*sin(xi2),xi1);
 }
 

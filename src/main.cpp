@@ -141,7 +141,7 @@ void runCuda(){
       }
       
       gammaSettings gamma;
-      gamma.applyGamma = true;
+      gamma.applyGamma = false;
       gamma.gamma = 1.0/2.2;
       gamma.divisor = renderCam->iterations;
       outputImage.setGammaSettings(gamma);
@@ -157,7 +157,6 @@ void runCuda(){
       finishedRender = true;
       if(singleFrameMode==true){
         cudaDeviceReset(); 
-		system("pause");
         exit(0);
       }
     }
