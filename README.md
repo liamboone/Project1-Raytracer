@@ -27,6 +27,14 @@ Blog
 http://liamboone.blogspot.com/2012/09/project-1-raytracer.html
 
 -------------------------------------------------------------------------------
+Building & Running
+-------------------------------------------------------------------------------
+This code uses CUDA 4.2
+I've tried to include all dll dependencies in the repo.
+I've left the 'Release' mode in visual studio untouched to allow for ease of testing on 4.0 machines
+If there are any problems please let me know, I'll be happy to do a fresh clone and run on my laptop.
+
+-------------------------------------------------------------------------------
 NOTE:
 -------------------------------------------------------------------------------
 This project requires an NVIDIA graphics card with CUDA capability! Any card after the Geforce 8xxx series will work. If you do not have an NVIDIA graphics card in the machine you are working on, feel free to use any machine in the SIG Lab or in Moore100 labs. All machines in the SIG Lab and Moore100 are equipped with CUDA capable NVIDIA graphics cards. If this too proves to be a problem, please contact Patrick or Karl as soon as possible.
