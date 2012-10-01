@@ -7,6 +7,26 @@ Due Sunday, 09/30/2012
 -------------------------------------------------------------------------------
 
 -------------------------------------------------------------------------------
+Raytracer
+-------------------------------------------------------------------------------
+For the ray tracer project I've implemented all of the base features for the project in an accumulation approach. Each iteration of the ray tracer renders the scene as a standard ray tracer would and then the output of this operation is accumulated and then averaged to produce one mean image at the end. I've chosen to implement in addition to the base set of features, soft shadows and depth of field. Since none of my features incorporate the bouncing of rays (no reflection, no refraction, etc.) I have implemented the ray tracer in a ray parallel format. Unfortunately, due to hardware constraints, my project runs considerably slower than I would have liked. This will be looked into more in depth in the future.
+
+-------------------------------------------------------------------------------
+Soft shadows
+-------------------------------------------------------------------------------
+To render my scene with soft shadows, I model the light source as being a collection of point light sources along its surface. In the code this is reflected by choosing a random point on the surface of the geometry emitting light when calculating the light ray from the intersection on the scene geometry to the light source instead of using the center of mass as a single point source. I use the iteration number as the seed for the random value and ignore the thread index. Calculating the seed this way gives the image (in my opinion) a more interesting and less grainy feel as it is being created.
+
+-------------------------------------------------------------------------------
+Depth of Field
+-------------------------------------------------------------------------------
+Giving the scene depth of field was a relatively straight forward task. When calculating the ray to cast into the scene I calculate it as normal, then I pivot by a small random amount about a point some distance (the focal distance, in my program it is hard coded in for simplicity to be 15 scene units). As in the soft shadows I only use the iteration number as the seed to give it a more interesting feel.
+
+-------------------------------------------------------------------------------
+Blog
+-------------------------------------------------------------------------------
+http://liamboone.blogspot.com/2012/09/project-1-raytracer.html
+
+-------------------------------------------------------------------------------
 NOTE:
 -------------------------------------------------------------------------------
 This project requires an NVIDIA graphics card with CUDA capability! Any card after the Geforce 8xxx series will work. If you do not have an NVIDIA graphics card in the machine you are working on, feel free to use any machine in the SIG Lab or in Moore100 labs. All machines in the SIG Lab and Moore100 are equipped with CUDA capable NVIDIA graphics cards. If this too proves to be a problem, please contact Patrick or Karl as soon as possible.
